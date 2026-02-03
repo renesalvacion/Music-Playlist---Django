@@ -7,6 +7,7 @@ authors = [
 ]
 requires-python = ">=3.13,<4.0"
 dependencies = [
+    "gunicorn (>=25.0.1,<26.0.0)"
 ]
 
 
