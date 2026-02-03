@@ -25,7 +25,11 @@ SECRET_KEY = 'django-insecure-z#*-y4kvieyg8fa^hrm&74te74d@ioi^v=isfizhgi)ku2_r_%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["https://music-playlist-django.onrender.com"]
+ALLOWED_HOSTS = [
+    "music-playlist-django.onrender.com",
+    "localhost",
+    "127.0.0.1",
+]
 
 
 # Application definition
@@ -50,7 +54,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'playlist.urls'
+ROOT_URLCONF = 'playlist.playlist.urls'
 
 TEMPLATES = [
     {
