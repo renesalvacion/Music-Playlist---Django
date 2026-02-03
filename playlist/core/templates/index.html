@@ -15,14 +15,7 @@
 
   <!-- Video Player -->
   <div class="w-full max-w-4xl mb-6">
-    {% if playlist %}
-    <iframe id="video-player" width="100%" height="400"
-            src="https://www.youtube.com/embed/{{ playlist.0.youtube_video_id }}?autoplay=1"
-            title="Now Playing" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
-    </iframe>
-    {% else %}
-    <p class="text-center text-gray-400">No music available. Add some tracks!</p>
-    {% endif %}
+    <div id="video-player"></div>
   </div>
 
   <!-- Add Music Form -->
@@ -37,7 +30,8 @@
     {% for track in playlist %}
     <div class="bg-gray-800 rounded-lg shadow flex items-center p-3 cursor-pointer hover:bg-gray-700"
          onclick="playVideo('{{ track.youtube_video_id }}', {{ forloop.counter0 }})">
-      <img src="{{ track.thumbnail }}" alt="Thumbnail" class="w-24 h-24 rounded-lg mr-4">
+      <img src="https://img.youtube.com/vi/{{ track.youtube_video_id }}/hqdefault.jpg" 
+           alt="Thumbnail" class="w-24 h-24 rounded-lg mr-4">
       <div class="flex-1">
         <h2 class="text-xl font-semibold">{{ track.song_name }}</h2>
         <p class="text-gray-400">{{ track.artist }}</p>
@@ -47,61 +41,70 @@
     {% endfor %}
   </section>
 
-  <!-- Optional: Autoplay next song -->
-<script src="https://www.youtube.com/iframe_api"></script>
-<script>
-  let player;
-  let currentIndex = 0;
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    let player;
+    let currentIndex = 0;
 
-  // Build playlist array
-  const playlistIds = [
-    {% for track in playlist %}
-      "{{ track.youtube_video_id }}"{% if not forloop.last %},{% endif %}
-    {% endfor %}
-  ];
+    // Build playlist array from Django context
+    const playlistIds = [
+      {% for track in playlist %}
+        "{{ track.youtube_video_id }}"{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
 
-  function onYouTubeIframeAPIReady() {
-    player = new YT.Player('video-player', {
-      events: {
-        'onReady': onPlayerReady,
-        'onStateChange': onPlayerStateChange
-      }
-    });
-  }
-
-  function onPlayerReady(event) {
-    event.target.playVideo();
-  }
-
-  function onPlayerStateChange(event) {
-    // Video ended
-    if (event.data === YT.PlayerState.ENDED) {
-      currentIndex = (currentIndex + 1) % playlistIds.length;
-      player.loadVideoById(playlistIds[currentIndex]);
+    // This function is called by the YouTube API
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('video-player', {
+        height: '400',
+        width: '100%',
+        videoId: playlistIds[0] || '', // play first video
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          rel: 0
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
+      });
     }
-  }
 
-  // Play video from playlist when clicking a track
-  function playVideo(videoId, index) {
-    currentIndex = index;
-    player.loadVideoById(videoId);
-  }
+    function onPlayerReady(event) {
+      event.target.playVideo();
+    }
 
-  // Handle form submission via AJAX
-  const form = document.getElementById('add-music-form');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(form);
-    const response = await fetch("{% url 'add_music' %}", {
-      method: "POST",
-      body: formData,
-      headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    function onPlayerStateChange(event) {
+      // If video ended, play next
+      if (event.data === YT.PlayerState.ENDED) {
+        currentIndex = (currentIndex + 1) % playlistIds.length;
+        player.loadVideoById(playlistIds[currentIndex]);
+      }
+    }
+
+    // Play video from playlist when clicking a track
+    function playVideo(videoId, index) {
+      currentIndex = index;
+      player.loadVideoById(videoId);
+    }
+
+    // Handle form submission via AJAX
+    const form = document.getElementById('add-music-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const response = await fetch("{% url 'add_music' %}", {
+        method: "POST",
+        body: formData,
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+      });
+      const data = await response.json();
+      if (data.error) alert(data.error);
+      else location.reload();
     });
-    const data = await response.json();
-    if (data.error) alert(data.error);
-    else location.reload();
-  });
-</script>
+  </script>
 
 </body>
 </html>
