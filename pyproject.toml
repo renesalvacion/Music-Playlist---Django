@@ -8,8 +8,11 @@ authors = [
 requires-python = ">=3.13,<4.0"
 dependencies = [
     "gunicorn (>=25.0.1,<26.0.0)",
-    "django (>=6.0.1,<7.0.0)"
+    "django (>=6.0.1,<7.0.0)",
+    "pymongo (>=4.6,<5.0)",
+    "dnspython (>=2.4,<3.0)"
 ]
+
 
 
 [build-system]
