@@ -48,43 +48,60 @@
   </section>
 
   <!-- Optional: Autoplay next song -->
-  <script>
-    const player = document.getElementById('video-player');
-    let currentIndex = 0;
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  let player;
+  let currentIndex = 0;
 
-    const playlist = [
-      {% for track in playlist %}
+  // Build playlist array
+  const playlistIds = [
+    {% for track in playlist %}
       "{{ track.youtube_video_id }}"{% if not forloop.last %},{% endif %}
-      {% endfor %}
-    ];
+    {% endfor %}
+  ];
 
-    function playVideo(videoId, index) {
-      currentIndex = index;
-      player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('video-player', {
+      events: {
+        'onReady': onPlayerReady,
+        'onStateChange': onPlayerStateChange
+      }
+    });
+  }
+
+  function onPlayerReady(event) {
+    event.target.playVideo();
+  }
+
+  function onPlayerStateChange(event) {
+    // Video ended
+    if (event.data === YT.PlayerState.ENDED) {
+      currentIndex = (currentIndex + 1) % playlistIds.length;
+      player.loadVideoById(playlistIds[currentIndex]);
     }
+  }
 
-    // Listen for video end to auto-play next
-    player.addEventListener('load', () => {
-      player.contentWindow.addEventListener('ended', () => {
-        currentIndex = (currentIndex + 1) % playlist.length;
-        playVideo(playlist[currentIndex], currentIndex);
-      });
-    });
+  // Play video from playlist when clicking a track
+  function playVideo(videoId, index) {
+    currentIndex = index;
+    player.loadVideoById(videoId);
+  }
 
-    // Handle form submission via AJAX
-    const form = document.getElementById('add-music-form');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(form);
-      const response = await fetch("{% url 'add_music' %}", {
-        method: "POST",
-        body: formData,
-        headers: {'X-CSRFToken': '{{ csrf_token }}'}
-      });
-      const data = await response.json();
-      if (data.error) alert(data.error);
-      else location.reload();
+  // Handle form submission via AJAX
+  const form = document.getElementById('add-music-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const response = await fetch("{% url 'add_music' %}", {
+      method: "POST",
+      body: formData,
+      headers: {'X-CSRFToken': '{{ csrf_token }}'}
     });
-  </script>
+    const data = await response.json();
+    if (data.error) alert(data.error);
+    else location.reload();
+  });
+</script>
+
 </body>
 </html>
