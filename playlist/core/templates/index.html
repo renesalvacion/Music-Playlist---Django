@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Music SoundTrip - MTV Mode</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center">
+
+  <!-- Header -->
+  <header class="text-center py-6">
+    <h1 class="text-4xl font-bold text-pink-500">🎵 Music SoundTrip - MTV</h1>
+    <p class="text-gray-300 mt-2">Auto-play your favorite tracks!</p>
+  </header>
+
+  <!-- Video Player -->
+  <div class="w-full max-w-4xl mb-6">
+    {% if playlist %}
+    <iframe id="video-player" width="100%" height="400"
+            src="https://www.youtube.com/embed/{{ playlist.0.youtube_video_id }}?autoplay=1"
+            title="Now Playing" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
+    </iframe>
+    {% else %}
+    <p class="text-center text-gray-400">No music available. Add some tracks!</p>
+    {% endif %}
+  </div>
+
+  <!-- Add Music Form -->
+  <form id="add-music-form" class="mb-6 w-full max-w-4xl flex">
+    <input type="text" name="title" placeholder="Song Name - Artist"
+           class="flex-1 p-3 rounded-l-lg text-black" required>
+    <button type="submit" class="bg-pink-500 text-white p-3 rounded-r-lg font-bold hover:bg-pink-600">Add Track</button>
+  </form>
+
+  <!-- Playlist -->
+  <section id="playlist" class="w-full max-w-4xl grid grid-cols-1 gap-4">
+    {% for track in playlist %}
+    <div class="bg-gray-800 rounded-lg shadow flex items-center p-3 cursor-pointer hover:bg-gray-700"
+         onclick="playVideo('{{ track.youtube_video_id }}', {{ forloop.counter0 }})">
+      <img src="{{ track.thumbnail }}" alt="Thumbnail" class="w-24 h-24 rounded-lg mr-4">
+      <div class="flex-1">
+        <h2 class="text-xl font-semibold">{{ track.song_name }}</h2>
+        <p class="text-gray-400">{{ track.artist }}</p>
+      </div>
+      <span class="text-pink-500 font-bold">▶️</span>
+    </div>
+    {% endfor %}
+  </section>
+
+  <!-- Optional: Autoplay next song -->
+  <script>
+    const player = document.getElementById('video-player');
+    let currentIndex = 0;
+
+    const playlist = [
+      {% for track in playlist %}
+      "{{ track.youtube_video_id }}"{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    function playVideo(videoId, index) {
+      currentIndex = index;
+      player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    }
+
+    // Listen for video end to auto-play next
+    player.addEventListener('load', () => {
+      player.contentWindow.addEventListener('ended', () => {
+        currentIndex = (currentIndex + 1) % playlist.length;
+        playVideo(playlist[currentIndex], currentIndex);
+      });
+    });
+
+    // Handle form submission via AJAX
+    const form = document.getElementById('add-music-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const response = await fetch("{% url 'add_music' %}", {
+        method: "POST",
+        body: formData,
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+      });
+      const data = await response.json();
+      if (data.error) alert(data.error);
+      else location.reload();
+    });
+  </script>
+</body>
+</html>
