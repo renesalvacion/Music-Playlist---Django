@@ -3,9 +3,9 @@ name = "playlist"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Rene Salvacion",email = "104616426+renesalvacion@users.noreply.github.com"}
+    {name = "Rene Salvacion", email = "104616426+renesalvacion@users.noreply.github.com"}
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.13,<4.0"
 dependencies = [
 ]
 
