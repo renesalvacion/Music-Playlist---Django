@@ -5,106 +5,130 @@
   <title>Music SoundTrip - MTV Mode</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-900 text-white min-h-screen flex flex-col items-center">
 
-  <!-- Header -->
-  <header class="text-center py-6">
-    <h1 class="text-4xl font-bold text-pink-500">🎵 Music SoundTrip - MTV</h1>
-    <p class="text-gray-300 mt-2">Auto-play your favorite tracks!</p>
-  </header>
+<header class="text-center py-6">
+  <h1 class="text-4xl font-bold text-pink-500">🎵 Music SoundTrip - MTV</h1>
+  <p class="text-gray-300 mt-2">Auto-play your favorite tracks!</p>
+</header>
 
-  <!-- Video Player -->
-  <div class="w-full max-w-4xl mb-6">
-    <div id="video-player"></div>
-  </div>
+<div class="w-full max-w-4xl mb-6">
+  <div id="video-player"></div>
+</div>
 
-  <!-- Add Music Form -->
-  <form id="add-music-form" class="mb-6 w-full max-w-4xl flex">
-    <input type="text" name="title" placeholder="Song Name - Artist"
-           class="flex-1 p-3 rounded-l-lg text-black" required>
-    <button type="submit" class="bg-pink-500 text-white p-3 rounded-r-lg font-bold hover:bg-pink-600">Add Track</button>
-  </form>
+<form id="add-music-form" class="mb-6 w-full max-w-4xl flex">
+  <input type="text" name="title" placeholder="Song Name - Artist"
+         class="flex-1 p-3 rounded-l-lg text-black" required>
+  <button class="bg-pink-500 p-3 rounded-r-lg font-bold">Add Track</button>
+</form>
 
-  <!-- Playlist -->
-  <section id="playlist" class="w-full max-w-4xl grid grid-cols-1 gap-4">
-    {% for track in playlist %}
-    <div class="bg-gray-800 rounded-lg shadow flex items-center p-3 cursor-pointer hover:bg-gray-700"
-         onclick="playVideo('{{ track.youtube_video_id }}', {{ forloop.counter0 }})">
-      <img src="https://img.youtube.com/vi/{{ track.youtube_video_id }}/hqdefault.jpg" 
-           alt="Thumbnail" class="w-24 h-24 rounded-lg mr-4">
-      <div class="flex-1">
-        <h2 class="text-xl font-semibold">{{ track.song_name }}</h2>
-        <p class="text-gray-400">{{ track.artist }}</p>
-      </div>
-      <span class="text-pink-500 font-bold">▶️</span>
+<section id="playlist" class="w-full max-w-4xl grid gap-4">
+  {% for track in playlist %}
+  <div class="bg-gray-800 p-3 rounded-lg flex items-center hover:bg-gray-700 cursor-pointer"
+       onclick="playVideo('{{ track.youtube_video_id }}', {{ forloop.counter0 }})">
+
+    <img src="{{ track.thumbnail }}" class="w-24 h-24 rounded-lg mr-4">
+
+    <div class="flex-1">
+      <h2 class="text-xl font-semibold">{{ track.song_name }}</h2>
+      <p class="text-gray-400">{{ track.artist }}</p>
     </div>
-    {% endfor %}
-  </section>
 
-  <!-- YouTube IFrame API -->
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <script>
-    let player;
-    let currentIndex = 0;
+    <span class="mr-3 text-pink-500">▶️</span>
 
-    // Build playlist array from Django context
-    const playlistIds = [
-      {% for track in playlist %}
-        "{{ track.youtube_video_id }}"{% if not forloop.last %},{% endif %}
-      {% endfor %}
-    ];
+    <button onclick="deleteTrack(event, '{{ track.youtube_video_id }}')"
+            class="text-red-500 text-xl">🗑️</button>
+  </div>
+  {% endfor %}
+</section>
 
-    // This function is called by the YouTube API
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('video-player', {
-        height: '400',
-        width: '100%',
-        videoId: playlistIds[0] || '', // play first video
-        playerVars: {
-          autoplay: 1,
-          controls: 1,
-          rel: 0
-        },
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange
-        }
-      });
-    }
+<script src="https://www.youtube.com/iframe_api"></script>
 
-    function onPlayerReady(event) {
-      event.target.playVideo();
-    }
+<script>
+let player;
+let currentIndex = 0;
 
-    function onPlayerStateChange(event) {
-      // If video ended, play next
-      if (event.data === YT.PlayerState.ENDED) {
-        currentIndex = (currentIndex + 1) % playlistIds.length;
-        player.loadVideoById(playlistIds[currentIndex]);
-      }
-    }
+const playlistIds = [
+  {% for track in playlist %}
+    "{{ track.youtube_video_id }}"{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
 
-    // Play video from playlist when clicking a track
-    function playVideo(videoId, index) {
-      currentIndex = index;
-      player.loadVideoById(videoId);
-    }
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('video-player', {
+    height: '400',
+    width: '100%',
+    videoId: playlistIds[0] || '',
+    events: { onStateChange }
+  });
+}
 
-    // Handle form submission via AJAX
-    const form = document.getElementById('add-music-form');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(form);
-      const response = await fetch("{% url 'add_music' %}", {
-        method: "POST",
-        body: formData,
-        headers: {'X-CSRFToken': '{{ csrf_token }}'}
-      });
-      const data = await response.json();
-      if (data.error) alert(data.error);
-      else location.reload();
-    });
-  </script>
+function onStateChange(e) {
+  if (e.data === YT.PlayerState.ENDED) {
+    currentIndex = (currentIndex + 1) % playlistIds.length;
+    player.loadVideoById(playlistIds[currentIndex]);
+  }
+}
+
+function playVideo(id, index) {
+  currentIndex = index;
+  player.loadVideoById(id);
+}
+
+function addTrackToDOM(track, index) {
+  const div = document.createElement("div");
+  div.className = "bg-gray-800 p-3 rounded-lg flex items-center hover:bg-gray-700 cursor-pointer";
+  div.onclick = () => playVideo(track.youtube_video_id, index);
+
+  div.innerHTML = `
+    <img src="${track.thumbnail}" class="w-24 h-24 rounded-lg mr-4">
+    <div class="flex-1">
+      <h2 class="text-xl font-semibold">${track.song_name}</h2>
+      <p class="text-gray-400">${track.artist}</p>
+    </div>
+    <span class="mr-3 text-pink-500">▶️</span>
+    <button class="text-red-500 text-xl">🗑️</button>
+  `;
+
+  div.querySelector("button").onclick = (e) => deleteTrack(e, track.youtube_video_id);
+  document.getElementById("playlist").appendChild(div);
+}
+
+document.getElementById("add-music-form").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const res = await fetch("{% url 'add_music' %}", {
+    method: "POST",
+    body: new FormData(e.target),
+    headers: { "X-CSRFToken": "{{ csrf_token }}" }
+  });
+
+  const data = await res.json();
+  if (data.error) return alert(data.error);
+
+  playlistIds.push(data.track.youtube_video_id);
+  addTrackToDOM(data.track, playlistIds.length - 1);
+  playVideo(data.track.youtube_video_id, playlistIds.length - 1);
+
+  e.target.reset();
+});
+
+async function deleteTrack(e, videoId) {
+  e.stopPropagation();
+
+  await fetch("{% url 'delete_music' %}", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": "{{ csrf_token }}",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ youtube_video_id: videoId })
+  });
+
+  location.reload();
+}
+</script>
 
 </body>
 </html>
