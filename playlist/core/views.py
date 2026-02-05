@@ -95,3 +95,15 @@ def delete_music(request):
 
     collection.delete_one({"youtube_video_id": video_id})
     return JsonResponse({"success": True})
+
+
+def get_playlist(request):
+    playlist = list(
+        collection.find({"validated": True}).sort("created_at", 1)
+    )
+
+    # Convert ObjectId to string for JSON
+    for item in playlist:
+        item["_id"] = str(item["_id"])
+
+    return JsonResponse({"playlist": playlist})
